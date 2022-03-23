@@ -1,4 +1,4 @@
-from msilib.schema import Directory
+#from msilib.schema import Directory
 from pickle import LONG4
 from pickletools import long4
 import pandas as pd
