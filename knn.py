@@ -1,95 +1,76 @@
-#from msilib.schema import Directory
-from pickle import LONG4
-from pickletools import long4
-import pandas as pd
+from importlib.resources import path
 import os
 import math
 import numpy as np
-import cv2
-try:
-    import Image
-except ImportError:
-    from PIL import Image
+from PIL import Image
 
-fireFolder = os.listdir('fire')
-iceFolder = os.listdir('ice')
 
-n_fire_image = len(fireFolder)
-n_ice_image = len(iceFolder)
-
-iceVector = []
-fireVector = []
-
-for _ in range(0, n_fire_image):
-    fire = 'fire/'+fireFolder[_]
-    ice = 'ice/'+iceFolder[_]
-    fireImg = Image.open(fire)
-    fireImg = fireImg.resize((32,32))
-    fireImageSequence = fireImg.getdata()
-    imageArray = np.array(fireImageSequence)
-    #print(imageArray)
+def buildImgVector(path):
+    Img = Image.open(path)
+    Img = Img.resize((100,100))
+    ImageSequence = Img.getdata()
+    imageArray = np.array(ImageSequence)
     imageVector = imageArray.flatten()
-    #print(imageArray)
-    fireVector.append(imageVector)
-
-    iceImg = Image.open(ice)
-    iceImg = iceImg.resize((32,32))
-    iceImgSequence = iceImg.getdata()
-    imageArray = np.array(iceImgSequence)
-    imageVector = imageArray.flatten()
-    iceVector.append(imageVector)
-
-testImg = Image.open('test2.png')
-testImg = testImg.resize((32,32))
-testImgSequence = testImg.getdata()
-testImgArray = np.array(testImgSequence)
-testImgVector = testImgArray.flatten()
+    return imageVector
 
 
-distanceWithFire =  []
-distanceWithIce = []
+def buildImgVectorList():
+    tigerFolder = os.listdir('tigers')
+    elephantFolder = os.listdir('elephants')
+    tigerVectorList = []
+    elephantVectorList = []
+    
+    for i in range(0, len(tigerFolder)):
+        imageVector=buildImgVector('tigers/'+tigerFolder[i])
+        tigerVectorList.append(imageVector)
 
-for i in range (0, len(fireVector)):
-    distance = 0
-    for j in range (min(len(testImgVector), len(fireVector[i]))):
-        distance += (testImgVector[j] - fireVector[i][j])*(testImgVector[j] - fireVector[i][j])
+        imageVector=buildImgVector('elephants/'+elephantFolder[i])
+        elephantVectorList.append(imageVector)
         
-    distance = math.sqrt(distance)
-    distanceWithFire.append(distance)
+    return tigerVectorList,elephantVectorList
 
-for i in range (0, len(iceVector)):
-    distance = 0
-    for j in range (min(len(testImgVector), len(iceVector[i]))):
-        distance += (testImgVector[j] - iceVector[i][j])*(testImgVector[j] - iceVector[i][j])
-    
-    distance = math.sqrt(distance)
-    distanceWithIce.append(distance)
 
-distanceWithFire.sort()
-distanceWithIce.sort()
+def calculate_ED(vectorList,testVector):
+    distanceList =  []
 
-k = int(input("enter the value for k: "))
-i=0
-j=0
-fireCount = 0
-iceCount = 0
+    for i in range (0, len(vectorList)):
+        distance = 0
+        for j in range (min(len(testVector), len(vectorList[i]))):
+            distance += (testVector[j] - vectorList[i][j])*(testVector[j] - vectorList[i][j])
+            
+        distance = math.sqrt(distance)
+        distanceList.append(distance)
+    return distanceList
 
-for itr in range(0,k):
-    if(distanceWithFire[i]< distanceWithIce[j]):
-        fireCount += 1
-        i += 1
+def predict(distanceList1,distanceList2,k):
+    distanceList1.sort()
+    distanceList2.sort()
+
+    Count1 = 0
+    Count2 = 0
+
+    for _ in range(0,k):
+        if(distanceList1[Count1]< distanceList2[Count2]):
+            Count1+=1
+        else:
+            Count2 +=1
+
+    if Count1 > Count2:
+        print('Tiger')
     else:
-        iceCount +=1
-        j+=1
+        print("Elephant")
 
-if iceCount >fireCount:
-    print('input image is ice')
-else:
-    print("input image is fire")
 
+def main():
+    k = int(input("Enter value of k: "))
+    tigerVectorList = []
+    elephantVectorList = []
+    tigerVectorList, elephantVectorList = buildImgVectorList()
+    testImgVector = buildImgVector('cat.png')
+    distanceList_WithTigers = calculate_ED(tigerVectorList,testImgVector)
+    distanceList_WithElephant = calculate_ED(elephantVectorList,testImgVector)
+    predict(distanceList_WithTigers,distanceList_WithElephant,k)
     
 
-
-
-
-
+if __name__ == "__main__":
+    main()
